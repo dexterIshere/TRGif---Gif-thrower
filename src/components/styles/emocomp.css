@@ -1,0 +1,99 @@
+.emoSpwn {
+  width: 100%;
+
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.emoMap {
+  width: 100%;
+}
+
+.emoZone {
+  display: flex;
+  justify-content: space-between;
+  height: 4rem;
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.emoContainer {
+  display: flex;
+  width: 85%;
+  background-color: rgb(20, 20, 20);
+  box-shadow: 2px 2px 5px 1px #000000d9;
+  border-radius: 5px;
+  height: 100%;
+  align-items: center;
+}
+
+.emoInf {
+  width: 22%;
+  padding: 0 0.5rem;
+}
+
+.emoForm {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  height: 75%;
+}
+
+.emoInput {
+  width: 60%;
+  justify-content: center;
+  background-color: #000;
+  align-items: center;
+  border-radius: 5px;
+  border: none;
+  padding: 0 1rem;
+}
+
+.addEmoGif {
+  background-color: #336cb1;
+  width: 20%;
+  align-items: center;
+  border-radius: 5px;
+  border: none;
+}
+
+.KeyBTN {
+  height: 100%;
+  aspect-ratio: 1/1;
+  backdrop-filter: blur(5px);
+  display: flex;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  justify-content: center;
+  box-shadow: rgba(0, 0, 0, 0.36) 0px 2px 4px,
+    rgba(0, 0, 0, 0.26) 0px 7px 13px -3px,
+    rgba(0, 0, 0, 0.33) 0px -3px 0px inset,
+    rgba(211, 160, 255, 0.13) 0px 2px 1px inset;
+  align-items: center;
+  border-radius: 15px;
+  transition: 600ms;
+}
+.KeyBTN p {
+  color: #ffffff;
+  filter: drop-shadow(5px 5px 15px #58a3ff);
+  font-size: 2rem;
+}
+
+.add-emo {
+  border: none;
+  width: 5rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  backdrop-filter: blur(1px);
+  background-color: #8f8f8f37;
+  border: 1px solid rgba(225, 225, 225, 0.08);
+}
+
+.new-emo-form-container {
+  background-color: #00000075;
+  height: 3rem;
+}

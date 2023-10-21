@@ -1,0 +1,24 @@
+{
+  "name": "trg",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "tauri": "tauri"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tauri-apps/api": "^1.5.0",
+    "solid-icons": "^1.0.12",
+    "solid-js": "^1.7.8"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.5.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.4",
+    "vite-plugin-solid": "^2.7.0"
+  }
+}
