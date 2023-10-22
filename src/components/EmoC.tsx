@@ -41,7 +41,7 @@ export const Emoc = () => {
           </form>
         </div>
 
-        <CommandKey />
+        <CommandKey emotionN={emotions} />
       </div>
     );
   });
@@ -68,10 +68,17 @@ export const Emoc = () => {
   );
 };
 
-export const CommandKey = () => {
+interface CommandKeyProps {
+  emotionN: string;
+}
+
+export const CommandKey = ({ emotionN }: CommandKeyProps) => {
   const [key, setKey] = createSignal("");
+  //setkey avec un nouvelle fonction :
+  //actualkey() fetch un .ini qui contient chaque param
+  //donc à la base le bouton aura le résult de emoname.key
   async function newKeys() {
-    setKey(await invoke("new_keys"));
+    setKey(await invoke("new_keys", { emotion: emotionN }));
   }
   return (
     <button onClick={() => newKeys()} class="KeyBTN">
