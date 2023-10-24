@@ -1,9 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
+mod shared_state;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, thread};
 
@@ -82,22 +84,25 @@ fn random_gif(emotion: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn new_keys(emotion: &str) -> Result<String, String> {
+    let _ = rmv_key(emotion);
     let device_state = DeviceState::new();
     let mut key_pressed: Vec<Keycode> = Vec::new();
-
+    let mut last_keys: Vec<Keycode> = Vec::new();
     loop {
+        thread::sleep(Duration::from_millis(16));
         let keys = device_state.get_keys();
-        if !keys.is_empty() {
-            for key in keys.iter() {
-                if !key_pressed.contains(key) {
-                    key_pressed.push(*key);
-                }
-            }
-        } else {
-            if !key_pressed.is_empty() {
-                break;
+
+        for key in &keys {
+            if !last_keys.contains(key) && !key_pressed.contains(key) {
+                key_pressed.push(*key);
             }
         }
+
+        if keys.is_empty() && !key_pressed.is_empty() {
+            break;
+        }
+
+        last_keys = keys.clone();
     }
 
     let mut new_cmd = String::new();
@@ -115,9 +120,44 @@ fn new_keys(emotion: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn fetch_emo_key(emotion: &str) -> Result<String, String> {
+    let file_content = read_toml()?;
+    let mut get_config_val: toml::value::Table = toml::from_str(&file_content).unwrap();
+
+    if let Some(settings) = get_config_val.get_mut("settings") {
+        if let Some(value) = settings.get(emotion) {
+            if let Some(val_str) = value.as_str() {
+                return Ok(val_str.to_string());
+            }
+        }
+    }
+
+    Err("X".to_string())
+}
+
+#[tauri::command]
 fn new_emo(name: &str) -> Result<(), String> {
     let _ = get_n_read(name);
     Ok(())
+}
+
+#[tauri::command]
+fn rmv_emo(emotion: &str) -> Result<(), String> {
+    let emotions_dir = get_local_data_path()?;
+    let file_path = emotions_dir.join(format!("{}.json", emotion));
+    println!("{:?}", file_path);
+
+    if let Err(e) = fs::remove_file(&file_path) {
+        return Err(format!("Failed to remove file: {}", e));
+    }
+
+    let _ = rmv_key(emotion);
+    Ok(())
+}
+#[tauri::command]
+fn watch_emo_folder() -> Result<String, String> {
+    let emo_vec = get_emo_dir()?;
+    Ok(serde_json::to_string(&emo_vec).unwrap())
 }
 
 fn main() {
@@ -131,7 +171,7 @@ fn main() {
         .add_native_item(SystemTrayMenuItem::Separator);
 
     // keys
-    listen_keys();
+    let _ = listen_keys();
 
     tauri::Builder::default()
         .system_tray(SystemTray::new().with_menu(tray_menu))
@@ -149,7 +189,14 @@ fn main() {
             },
             _ => {}
         })
-        .invoke_handler(tauri::generate_handler![add_to_list, new_keys, new_emo])
+        .invoke_handler(tauri::generate_handler![
+            add_to_list,
+            new_keys,
+            new_emo,
+            fetch_emo_key,
+            watch_emo_folder,
+            rmv_emo
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app_handle, event| match event {
@@ -176,39 +223,51 @@ fn copy_pasta(emotion: &str) {
     simulate(&EventType::KeyRelease(Key::Return)).unwrap();
 }
 
-fn listen_keys() {
-    let device_state = DeviceState::new();
-    thread::spawn(move || {
-        let _guard = device_state.on_key_down(|key| match key {
-            Keycode::F2 => {
-                let emotion = "fun";
-                copy_pasta(&emotion)
+fn listen_keys() -> Result<(), String> {
+    let device_state = Arc::new(DeviceState::new());
+
+    let file_content = read_toml()?;
+
+    let config: toml::value::Table = toml::from_str(&file_content).unwrap();
+
+    let settings = config.get("settings").unwrap().as_table().unwrap();
+    println!("//// {:?}", settings);
+
+    for (emotion, keycode_str) in settings.iter() {
+        let emotion_clone = emotion.clone();
+        let keycode_str_clone = keycode_str.clone();
+        let device_state_clone = device_state.clone();
+
+        thread::spawn(move || {
+            let keycode = Keycode::from_str(keycode_str_clone.as_str().unwrap()).unwrap();
+            let emotion_clone_for_closure = emotion_clone.clone();
+            let _guard = device_state_clone.on_key_down(move |key| {
+                if key == &keycode {
+                    // println!("{}", emotion_clone_for_closure);
+                    copy_pasta(&emotion_clone_for_closure);
+                }
+            });
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
-            Keycode::F3 => {
-                let emotion = "cringe";
-                copy_pasta(&emotion)
-            }
-            Keycode::F4 => {
-                let emotion = "choked-boar";
-                copy_pasta(&emotion)
-            }
-            _ => (),
         });
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-        }
-    });
+    }
+
+    Ok(())
 }
 
-fn watch_emo_folder() -> Result<Vec<String>, String> {
+fn get_emo_dir() -> Result<Vec<String>, String> {
     let emotion_dir = get_local_data_path()?;
     let mut emo_box = Vec::new();
 
     for entry in WalkDir::new(emotion_dir) {
         let entry = entry.unwrap();
         if entry.file_type().is_file() {
-            if let Some(emo_name) = entry.file_name().to_str() {
-                emo_box.push(emo_name.to_string());
+            let path = Path::new(entry.path());
+            if let Some(stem) = path.file_stem() {
+                if let Some(emo_name) = stem.to_str() {
+                    emo_box.push(emo_name.to_string());
+                }
             }
         }
     }
@@ -224,9 +283,9 @@ fn fetch_keyset() -> Result<PathBuf, String> {
     if !trgif_roaming_dir.exists() {
         create_dir_all(&trgif_roaming_dir).map_err(|e| e.to_string())?;
     }
-    let ini_file = trgif_roaming_dir.join(format!("config.toml"));
+    let toml_file = trgif_roaming_dir.join(format!("config.toml"));
 
-    if !ini_file.exists() {
+    if !toml_file.exists() {
         let mut default_section = toml::value::Table::new();
         default_section.insert(
             "settings".to_string(),
@@ -239,20 +298,19 @@ fn fetch_keyset() -> Result<PathBuf, String> {
         OpenOptions::new()
             .write(true)
             .create(true)
-            .open(&ini_file)
+            .open(&toml_file)
             .and_then(|mut file| file.write_all(toml_str.as_bytes()))
             .map_err(|e| e.to_string())?;
     }
-    println!("{:?}", ini_file);
 
-    Ok(ini_file)
+    Ok(toml_file)
 }
 
-fn read_ini() -> Result<String, String> {
-    let ini_file = fetch_keyset()?;
+fn read_toml() -> Result<String, String> {
+    let toml_file = fetch_keyset()?;
     let mut file_content = String::new();
 
-    File::open(ini_file)
+    File::open(toml_file)
         .expect("Fichier non trouvé!")
         .read_to_string(&mut file_content)
         .expect("Erreur lors de la lecture du fichier");
@@ -272,10 +330,10 @@ fn save_config(config: &Map<String, Value>) -> Result<(), String> {
 }
 
 fn insert_key(emotion: &str, value: &str) -> Result<(), String> {
-    let file_content = read_ini()?;
+    let file_content = read_toml()?;
     let mut config_add: toml::value::Table = toml::from_str(&file_content).unwrap();
-    let key = emotion;
-    let value = value;
+    let key = &emotion;
+    let value = &value;
 
     if let Some(db_map) = config_add
         .get_mut("settings")
@@ -288,7 +346,7 @@ fn insert_key(emotion: &str, value: &str) -> Result<(), String> {
 }
 
 fn rmv_key(emotion: &str) -> Result<(), String> {
-    let file_content = read_ini()?;
+    let file_content = read_toml()?;
     let mut config_rmv: toml::value::Table = toml::from_str(&file_content).unwrap();
     let key = emotion;
 

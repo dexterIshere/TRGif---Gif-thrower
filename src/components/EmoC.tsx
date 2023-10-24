@@ -1,7 +1,17 @@
-import { For, createSignal, mapArray } from "solid-js";
+import { For, createEffect, createSignal, mapArray } from "solid-js";
 import "./styles/emocomp.css";
 import { FaSolidPlus } from "solid-icons/fa";
 import { invoke } from "@tauri-apps/api/tauri";
+import { BsTrashFill } from "solid-icons/bs";
+import { IoClose } from "solid-icons/io";
+import { FiCornerRightDown } from "solid-icons/fi";
+const [emoArray, setEmoArray] = createSignal<string[]>([]);
+
+async function fetch_emo_list() {
+  const result = await invoke<string>("watch_emo_folder");
+  const parsedResult: string[] = JSON.parse(result);
+  setEmoArray(parsedResult);
+}
 
 export const Emoc = () => {
   const [valeur, setValeur] = createSignal("");
@@ -11,37 +21,55 @@ export const Emoc = () => {
     await invoke("add_to_list", { emotion: emotion(), valeur: valeur() });
   }
 
-  const [emo] = createSignal(["fun", "cringe", "choked-boar"]);
+  createEffect(async () => {
+    fetch_emo_list();
+  });
 
-  const emoMap = mapArray(emo, (emotions) => {
+  async function rmvEmo() {
+    await invoke("rmv_emo", { emotion: emotion() });
+  }
+
+  const emoMap = mapArray(emoArray, (emotions) => {
     return (
       <div class="emoZone">
-        <div class="emoContainer">
-          <div class="emoInf">{emotions}</div>
-
-          <form
-            class="emoForm"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setEmotion(emotions);
-              add_gif();
-            }}
-          >
-            <input
-              class="emoInput"
-              id="add-gif-input"
-              onChange={(e) => {
-                setValeur(e.currentTarget.value);
-              }}
-              placeholder="Enter a gif link..."
-            />
-            <button class="addEmoGif" type="submit">
-              ADD
-            </button>
-          </form>
+        <div class="emoInf">
+          <p>{emotions}</p> <FiCornerRightDown />
         </div>
-
-        <CommandKey emotionN={emotions} />
+        <div class="emoFlex">
+          <div class="emoContainer">
+            <form
+              class="emoForm"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setEmotion(emotions);
+                add_gif();
+              }}
+            >
+              <input
+                class="emoInput"
+                id="add-gif-input"
+                onChange={(e) => {
+                  setValeur(e.currentTarget.value);
+                }}
+                placeholder="Enter a gif link..."
+              />
+              <button class="addEmoGif" type="submit">
+                <FaSolidPlus />
+              </button>
+            </form>
+          </div>
+          <button
+            onClick={() => {
+              setEmotion(emotions);
+              rmvEmo();
+              fetch_emo_list();
+            }}
+            class="rmvEmo"
+          >
+            <BsTrashFill />
+          </button>
+          <CommandKey emotionN={emotions} />
+        </div>
       </div>
     );
   });
@@ -51,7 +79,7 @@ export const Emoc = () => {
   return (
     <div class="emoSpwn">
       <div class="emoMap">
-        <For each={emoMap()} fallback={<div> Loading... </div>}>
+        <For each={emoMap()} fallback={<div> No shortcuts ?? </div>}>
           {(emotions) => emotions}
         </For>
       </div>
@@ -74,14 +102,30 @@ interface CommandKeyProps {
 
 export const CommandKey = ({ emotionN }: CommandKeyProps) => {
   const [key, setKey] = createSignal("");
-  //setkey avec un nouvelle fonction :
-  //actualkey() fetch un .ini qui contient chaque param
-  //donc à la base le bouton aura le résult de emoname.key
+
+  createEffect(async () => {
+    const fetchedKey = (await invoke("fetch_emo_key", {
+      emotion: emotionN,
+    })) as string;
+    setKey(fetchedKey);
+  });
+
   async function newKeys() {
     setKey(await invoke("new_keys", { emotion: emotionN }));
   }
+
+  function clearKey() {
+    setKey("");
+  }
+
   return (
-    <button onClick={() => newKeys()} class="KeyBTN">
+    <button
+      onClick={() => {
+        newKeys();
+        clearKey();
+      }}
+      class="KeyBTN"
+    >
       <p>{key()}</p>
     </button>
   );
@@ -100,12 +144,22 @@ export function NewEmoForm({ setIsFormVisible }: NewEmoFormProps) {
 
   return (
     <div class="new-emo-form-container">
+      <button
+        class="close_creator"
+        onClick={() => {
+          setIsFormVisible(false);
+        }}
+      >
+        <IoClose />
+      </button>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           newEmo();
           setIsFormVisible(false);
+          fetch_emo_list();
         }}
+        class="new-emo-form"
       >
         <input
           onChange={(e) => {
@@ -113,8 +167,11 @@ export function NewEmoForm({ setIsFormVisible }: NewEmoFormProps) {
           }}
           placeholder="name ..."
           type="text"
+          class="new-emo-form-input"
         />
-        <button type="submit">new</button>
+        <button type="submit" class="new-emo-form-btn">
+          new
+        </button>
       </form>
     </div>
   );

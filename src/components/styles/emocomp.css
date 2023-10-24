@@ -12,54 +12,114 @@
 }
 
 .emoZone {
-  display: flex;
-  justify-content: space-between;
-  height: 4rem;
+  display: block;
   width: 100%;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
-.emoContainer {
+/* ///////////////////////////////////////// */
+/* grosse boite  */
+
+.emoFlex {
   display: flex;
-  width: 85%;
-  background-color: rgb(20, 20, 20);
-  box-shadow: 2px 2px 5px 1px #000000d9;
-  border-radius: 5px;
-  height: 100%;
+  height: 4rem;
   align-items: center;
 }
 
 .emoInf {
-  width: 22%;
-  padding: 0 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+  margin-right: auto;
+  margin-bottom: 1rem;
+}
+.emoInf p {
+  padding: 0rem 0.5rem;
+  background-color: #8f8f8f7b;
+  border-radius: 5px;
+  margin: 0;
+  margin-right: 0.5rem;
+}
+
+.emoContainer {
+  z-index: 15;
+  display: flex;
+  width: 100%;
+  border-radius: 5px;
+  height: 3rem;
+  align-items: center;
 }
 
 .emoForm {
+  border-radius: 5px;
+
+  width: 100%;
+  background-color: rgb(20, 20, 20);
   display: flex;
   justify-content: space-around;
-  width: 100%;
-  height: 75%;
+  height: 100%;
+  padding: 0.5rem 0.5rem;
 }
 
 .emoInput {
-  width: 60%;
+  width: 100%;
   justify-content: center;
   background-color: #000;
   align-items: center;
   border-radius: 5px;
   border: none;
   padding: 0 1rem;
+  margin-right: 0.5rem;
+  transition: 600ms;
+}
+.KeyBTN:hover,
+.emoInput:hover,
+.addEmoGif:hover,
+.rmvEmo:hover {
+  filter: brightness(1.5);
+}
+
+.addEmoGif:hover,
+.rmvEmo:hover {
+  transform: scale(0.95);
 }
 
 .addEmoGif {
+  cursor: pointer;
+  height: 100%;
+  aspect-ratio: 1/1;
   background-color: #336cb1;
-  width: 20%;
+  display: flex;
+  justify-content: center;
   align-items: center;
   border-radius: 5px;
   border: none;
+  font-size: 1.1rem;
+  transition: 600ms;
 }
 
+.rmvEmo {
+  cursor: pointer;
+  z-index: 5;
+  height: 3rem;
+  margin-left: -0.5rem;
+  aspect-ratio: 1/1;
+  background-color: rgb(255, 97, 97);
+  border: none;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 0.5rem;
+  transition: 600ms;
+}
+
+/* ///////////////////////////////////////// */
+/* btn ctrl */
+
 .KeyBTN {
+  cursor: pointer;
   height: 100%;
   aspect-ratio: 1/1;
   backdrop-filter: blur(5px);
@@ -73,13 +133,21 @@
   align-items: center;
   border-radius: 15px;
   transition: 600ms;
+  border: none;
+  white-space: normal;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: 600ms;
 }
 .KeyBTN p {
   color: #ffffff;
   filter: drop-shadow(5px 5px 15px #58a3ff);
-  font-size: 2rem;
+  font-size: 1rem;
 }
 
+/* ///////////////////////////////////////// */
+/* add emo */
 .add-emo {
   border: none;
   width: 5rem;
@@ -94,6 +162,65 @@
 }
 
 .new-emo-form-container {
-  background-color: #00000075;
+  position: relative;
+  z-index: 50;
+  position: absolute;
+  margin: auto;
+  background-color: #000000;
   height: 3rem;
+  width: 80%;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid rgba(225, 225, 225, 0.221);
 }
+
+.new-emo-form {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+.new-emo-form-input {
+  border-radius: 5px;
+  border: none;
+  width: 100%;
+  margin-right: 0.5rem;
+  padding-left: 0.5rem;
+  background-color: #8f8f8f37;
+  color: #fff;
+}
+.new-emo-form-btn {
+  border: none;
+  height: 100%;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  backdrop-filter: blur(1px);
+  background-color: #8f8f8f37;
+  border: 1px solid rgba(225, 225, 225, 0.08);
+}
+
+.close_creator {
+  z-index: 51;
+  position: absolute;
+  top: -1rem;
+  right: -1rem;
+  border-radius: 50%;
+  border: 3px solid rgb(0, 0, 0);
+  background-color: rgb(255, 97, 97);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 2rem;
+  width: 2rem;
+  font-size: 1rem;
+}
+
+/* ///////////////////////////////////////// */
