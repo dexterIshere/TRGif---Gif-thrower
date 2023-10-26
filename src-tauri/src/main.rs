@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod shared_state;
+use std::collections::HashSet;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -261,19 +262,41 @@ fn listen_keys(stop_signal: Arc<AtomicBool>) -> Result<(), String> {
         let config_clone = config.clone();
         let stop_signal = stop_signal.clone();
         thread::spawn(move || {
-            let _keycode = Keycode::from_str(keycode_str_clone.as_str().unwrap()).unwrap();
+            let active_keys: Arc<Mutex<HashSet<Keycode>>> = Arc::new(Mutex::new(HashSet::new()));
+            let required_keys: Arc<Mutex<Vec<Keycode>>> = Arc::new(Mutex::new(
+                keycode_str_clone
+                    .as_str()
+                    .unwrap()
+                    .split(" + ")
+                    .map(|s| Keycode::from_str(s).unwrap())
+                    .collect(),
+            ));
+
+            let active_keys_clone = active_keys.clone();
+            let required_keys_clone = required_keys.clone();
+
             let _guard = device_state_clone.on_key_down(move |key| {
+                let mut active_keys = active_keys_clone.lock().unwrap();
+                let mut required_keys = required_keys_clone.lock().unwrap();
+                active_keys.insert(*key);
                 let config_guard = config_clone.lock().unwrap();
                 let settings = config_guard.get("settings").unwrap().as_table().unwrap();
-                let updated_keycode_str = settings.get(&emotion_clone).unwrap();
+                let updated_keycode_str = settings.get(&emotion_clone).unwrap().as_str().unwrap();
+                required_keys.clear();
 
-                let updated_keycode =
-                    Keycode::from_str(updated_keycode_str.as_str().unwrap()).unwrap();
+                required_keys.extend(
+                    updated_keycode_str
+                        .split(" + ")
+                        .map(|s| Keycode::from_str(s).unwrap()),
+                );
 
-                if key == &updated_keycode {
+                if required_keys.iter().all(|k| active_keys.contains(k)) {
                     // println!("{}", emotion_clone);
                     copy_pasta(&emotion_clone);
                 }
+            });
+            let _guard_up = device_state_clone.on_key_up(move |key| {
+                active_keys.lock().unwrap().remove(key);
             });
             loop {
                 if stop_signal.load(Ordering::SeqCst) {
