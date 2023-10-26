@@ -5,7 +5,9 @@ use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Arc;
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fs, thread};
 
@@ -16,10 +18,13 @@ use rdev::{simulate, EventType, Key};
 use serde_derive::{Deserialize, Serialize};
 use tauri::api::path::{app_local_data_dir, config_dir};
 use tauri::{CustomMenuItem, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+use tokio;
 use toml::map::Map;
 use toml::Value;
 use walkdir::WalkDir;
 
+#[macro_use]
+extern crate lazy_static;
 #[derive(Serialize, Deserialize, Debug)]
 struct GifList {
     giflist: Vec<Link>,
@@ -28,6 +33,10 @@ struct GifList {
 #[derive(Serialize, Deserialize, Debug)]
 struct Link {
     link: String,
+}
+
+lazy_static! {
+    static ref STOP_SIGNAL: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
 }
 
 fn get_local_data_path() -> Result<PathBuf, String> {
@@ -83,13 +92,13 @@ fn random_gif(emotion: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn new_keys(emotion: &str) -> Result<String, String> {
+async fn new_keys(emotion: &str) -> Result<String, String> {
     let _ = rmv_key(emotion);
     let device_state = DeviceState::new();
     let mut key_pressed: Vec<Keycode> = Vec::new();
     let mut last_keys: Vec<Keycode> = Vec::new();
+
     loop {
-        thread::sleep(Duration::from_millis(16));
         let keys = device_state.get_keys();
 
         for key in &keys {
@@ -103,6 +112,7 @@ fn new_keys(emotion: &str) -> Result<String, String> {
         }
 
         last_keys = keys.clone();
+        tokio::time::sleep(Duration::from_millis(16)).await;
     }
 
     let mut new_cmd = String::new();
@@ -128,11 +138,13 @@ fn fetch_emo_key(emotion: &str) -> Result<String, String> {
         if let Some(value) = settings.get(emotion) {
             if let Some(val_str) = value.as_str() {
                 return Ok(val_str.to_string());
+            } else {
+                return Ok(format!("").to_string());
             }
         }
     }
 
-    Err("X".to_string())
+    Err("Ø".to_string())
 }
 
 #[tauri::command]
@@ -162,7 +174,7 @@ fn watch_emo_folder() -> Result<String, String> {
 
 fn main() {
     //config
-    let _ = watch_emo_folder();
+    // let _ = watch_emo_folder();
 
     //tray
     let leave_item = CustomMenuItem::new("quit".to_string(), "Quit");
@@ -171,7 +183,7 @@ fn main() {
         .add_native_item(SystemTrayMenuItem::Separator);
 
     // keys
-    let _ = listen_keys();
+    // let _ = listen_keys();
 
     tauri::Builder::default()
         .system_tray(SystemTray::new().with_menu(tray_menu))
@@ -223,35 +235,69 @@ fn copy_pasta(emotion: &str) {
     simulate(&EventType::KeyRelease(Key::Return)).unwrap();
 }
 
-fn listen_keys() -> Result<(), String> {
+fn listen_keys(stop_signal: Arc<AtomicBool>) -> Result<(), String> {
     let device_state = Arc::new(DeviceState::new());
 
     let file_content = read_toml()?;
 
-    let config: toml::value::Table = toml::from_str(&file_content).unwrap();
+    let initial_config: toml::value::Table = toml::from_str(&file_content).unwrap();
 
-    let settings = config.get("settings").unwrap().as_table().unwrap();
+    let config = Arc::new(Mutex::new(initial_config));
+
+    let settings = config
+        .lock()
+        .unwrap()
+        .get("settings")
+        .unwrap()
+        .as_table()
+        .unwrap()
+        .clone();
     println!("//// {:?}", settings);
 
     for (emotion, keycode_str) in settings.iter() {
         let emotion_clone = emotion.clone();
         let keycode_str_clone = keycode_str.clone();
         let device_state_clone = device_state.clone();
-
+        let config_clone = config.clone();
+        let stop_signal = stop_signal.clone();
         thread::spawn(move || {
-            let keycode = Keycode::from_str(keycode_str_clone.as_str().unwrap()).unwrap();
-            let emotion_clone_for_closure = emotion_clone.clone();
+            let _keycode = Keycode::from_str(keycode_str_clone.as_str().unwrap()).unwrap();
             let _guard = device_state_clone.on_key_down(move |key| {
-                if key == &keycode {
-                    // println!("{}", emotion_clone_for_closure);
-                    copy_pasta(&emotion_clone_for_closure);
+                let config_guard = config_clone.lock().unwrap();
+                let settings = config_guard.get("settings").unwrap().as_table().unwrap();
+                let updated_keycode_str = settings.get(&emotion_clone).unwrap();
+
+                let updated_keycode =
+                    Keycode::from_str(updated_keycode_str.as_str().unwrap()).unwrap();
+
+                if key == &updated_keycode {
+                    // println!("{}", emotion_clone);
+                    copy_pasta(&emotion_clone);
                 }
             });
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                if stop_signal.load(Ordering::SeqCst) {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
             }
         });
     }
+
+    Ok(())
+}
+
+fn save_config(config: &Map<String, Value>, stop_signal: Arc<AtomicBool>) -> Result<(), String> {
+    let path = fetch_keyset()?;
+    let toml_str = toml::to_string(&config).unwrap();
+
+    File::create(path)
+        .unwrap()
+        .write_all(toml_str.as_bytes())
+        .unwrap();
+
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let _ = listen_keys(Arc::clone(&stop_signal));
 
     Ok(())
 }
@@ -272,7 +318,11 @@ fn get_emo_dir() -> Result<Vec<String>, String> {
         }
     }
 
-    println!("{:#?}", emo_box);
+    let file_content = read_toml()?;
+    let config: toml::value::Table = toml::from_str(&file_content).unwrap();
+
+    STOP_SIGNAL.store(false, Ordering::SeqCst);
+    let _ = save_config(&config, Arc::clone(&STOP_SIGNAL));
 
     Ok(emo_box)
 }
@@ -318,17 +368,6 @@ fn read_toml() -> Result<String, String> {
     Ok(file_content)
 }
 
-fn save_config(config: &Map<String, Value>) -> Result<(), String> {
-    let path = fetch_keyset()?;
-    let toml_str = toml::to_string(&config).unwrap();
-
-    File::create(path)
-        .unwrap()
-        .write_all(toml_str.as_bytes())
-        .unwrap();
-    Ok(())
-}
-
 fn insert_key(emotion: &str, value: &str) -> Result<(), String> {
     let file_content = read_toml()?;
     let mut config_add: toml::value::Table = toml::from_str(&file_content).unwrap();
@@ -342,7 +381,8 @@ fn insert_key(emotion: &str, value: &str) -> Result<(), String> {
         db_map.insert(key.to_string(), Value::String(value.to_string()));
     }
 
-    save_config(&config_add)
+    STOP_SIGNAL.store(false, Ordering::SeqCst);
+    save_config(&config_add, Arc::clone(&STOP_SIGNAL))
 }
 
 fn rmv_key(emotion: &str) -> Result<(), String> {
@@ -356,6 +396,6 @@ fn rmv_key(emotion: &str) -> Result<(), String> {
     {
         db_map.remove(key);
     }
-
-    save_config(&config_rmv)
+    STOP_SIGNAL.store(true, Ordering::SeqCst);
+    save_config(&config_rmv, Arc::clone(&STOP_SIGNAL))
 }

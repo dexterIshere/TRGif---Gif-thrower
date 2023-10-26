@@ -16,6 +16,7 @@ async function fetch_emo_list() {
 export const Emoc = () => {
   const [valeur, setValeur] = createSignal("");
   const [emotion, setEmotion] = createSignal("");
+  let inputRef: HTMLInputElement | ((el: HTMLInputElement) => void) | undefined;
 
   async function add_gif() {
     await invoke("add_to_list", { emotion: emotion(), valeur: valeur() });
@@ -43,11 +44,15 @@ export const Emoc = () => {
                 e.preventDefault();
                 setEmotion(emotions);
                 add_gif();
+                if (inputRef instanceof HTMLInputElement) {
+                  inputRef.value = "";
+                }
               }}
             >
               <input
                 class="emoInput"
                 id="add-gif-input"
+                ref={(el) => (inputRef = el)}
                 onChange={(e) => {
                   setValeur(e.currentTarget.value);
                 }}
@@ -136,7 +141,7 @@ interface NewEmoFormProps {
 }
 
 export function NewEmoForm({ setIsFormVisible }: NewEmoFormProps) {
-  const [emoName, setEmoName] = createSignal("");
+  const [emoName, setEmoName] = createSignal("Ø");
 
   async function newEmo() {
     await invoke("new_emo", { name: emoName() });

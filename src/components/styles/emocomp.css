@@ -73,13 +73,15 @@
   margin-right: 0.5rem;
   transition: 600ms;
 }
+
+.add-emo:hover,
 .KeyBTN:hover,
 .emoInput:hover,
 .addEmoGif:hover,
 .rmvEmo:hover {
   filter: brightness(1.5);
 }
-
+.add-emo:hover,
 .addEmoGif:hover,
 .rmvEmo:hover {
   transform: scale(0.95);
@@ -159,6 +161,7 @@
   backdrop-filter: blur(1px);
   background-color: #8f8f8f37;
   border: 1px solid rgba(225, 225, 225, 0.08);
+  transition: 300ms;
 }
 
 .new-emo-form-container {
