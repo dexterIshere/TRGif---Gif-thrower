@@ -1,17 +1,26 @@
 <p align="center">
+  <img width="300" src="https://raw.githubusercontent.com/dexterIshere/TRGif---Gif-thrower/master/public/1080.png"/>
+</p>
+
+<p align="center">
     <img alt="language" src="https://img.shields.io/badge/language-Rust-orange.svg"> 
     <img alt="frawork" src="https://img.shields.io/badge/frawork-Tauri-orange.svg"> 
 </p>
 
 ---
 
-<p align="center"><p>The Right Gif In The Right Place</p></p>
-
 # TRGif
 
 ## 📋 Table of Contents
 
 - [Introduction](#-introduction)
-- [Commands](#-commands)
+- [Usage](#-usage)
 
-## 🌟 Introduction
+## ❤️‍🔥 Introduction
+
+Stop being slow when you react to your colleagues' jokes and react BLAZINGLY FAST with TRG.
+The Right Gif In The Right Place
+
+## 🔥 Usage
+
+![console-preview](https://raw.githubusercontent.com/dexterIshere/TRGif---Gif-thrower/master/public/trg.gif)

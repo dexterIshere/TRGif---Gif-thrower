@@ -33,11 +33,40 @@ body {
 
 .container {
   margin: 0;
+  margin-top: 3rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
   text-align: center;
   padding: 0 3rem;
+}
+
+.titlebar {
+  height: 30px;
+  background: #000;
+  user-select: none;
+  display: flex;
+  justify-content: flex-end;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.titlebar-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  height: 100%;
+  aspect-ratio: 1/1;
+}
+.titlebar-button svg {
+  font-size: 1.5rem;
+  transition: 300ms;
+  color: #ffffff;
+}
+.titlebar-button svg:hover {
+  transform: scale(1.1);
 }
 
 @media (prefers-color-scheme: dark) {
