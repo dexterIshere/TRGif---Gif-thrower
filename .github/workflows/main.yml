@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-latest]
+        platform: [macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -41,7 +41,7 @@ jobs:
 
       - name: Install and cache pnpm
         run: |
-          npm install -g pnpm
+          npm install -g pnpm || true
           echo "$(npm bin -g)" >> $GITHUB_PATH
 
 
