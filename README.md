@@ -4,7 +4,7 @@
 
 <p align="center">
     <img alt="language" src="https://img.shields.io/badge/language-Rust-orange.svg"> 
-    <img alt="frawork" src="https://img.shields.io/badge/frawork-Tauri-orange.svg"> 
+    <img alt="frawork" src="https://img.shields.io/badge/framework-Tauri-orange.svg"> 
 </p>
 
 ---
