@@ -22,5 +22,6 @@ Stop being slow when you react to your colleagues' jokes and react BLAZINGLY FAS
 The Right Gif In The Right Place
 
 ## 🔥 Usage
+When you add a string in the input, it will add this string to a json list. Then when you use the key it will fetch randomly one of the strings in the json file and finaly copy pasta this last string.
 
 ![console-preview](https://raw.githubusercontent.com/dexterIshere/TRGif---Gif-thrower/master/public/trg.gif)
